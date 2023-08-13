@@ -1,4 +1,4 @@
-ロボロボClub(https://www.enjoy-robo.com/)のmicro:bit用ライブラリを配布するためのデータセット
+ロボロボClub(https://www.enjoy-robo.com/　)のmicro:bit用ライブラリを配布するためのデータセット
 
 ○Library_2023_Summer_Workshop_Set
  ・以下を含むライブラリセット
