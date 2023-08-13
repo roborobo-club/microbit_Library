@@ -1,0 +1,191 @@
+//ライブラリ：フォトリフレクタ
+//Ver1.0.0
+enum Lib_Photo_Reflector_Port {
+    //% block="Port.0"
+    Zero,
+    //% block="Port.1"
+    One,
+}
+
+enum Lib_Photo_Reflector_Symbol {
+    //% block="="
+    Zero,
+    //% block="≠"
+    One,
+    //% block="<"
+    Two,
+    //% block="≦"
+    Three,
+    //% block=">"
+    Four,
+    //% block="≧"
+    Five,
+}
+
+enum Lib_Photo_Reflector_MM {
+    //% block="最大値"
+    Zero,
+    //% block="最小値"
+    One,
+}
+
+
+//% color=#60249f
+//% weight=10
+//%block="フォトリフレクタ"
+namespace Photo_Reflector {
+    let Photo_Reflector_TF = false
+    let Photo_Reflector_Val = 0
+    let Photo_Reflector_TMP = 0
+    let Photo_Reflector_I = 0
+    let Photo_Reflector_J = 0
+    let Photo_Reflector_Total = [0, 0, 0, 0, 0, 0, 0]
+    let Photo_Reflector_Pin = [0, 0]
+    let Photo_Reflector_Min = [0, 0]
+    let Photo_Reflector_Max = [0, 0]
+
+    function GetMin(Port: Lib_Photo_Reflector_Port, Initialization: boolean) {
+        if (Initialization) {
+            Photo_Reflector_Min[Port] = 2147483647
+        }
+        for (let index = 0; index < 10; index++) {
+            Photo_Reflector_Val = Value(Port)
+            if (Photo_Reflector_Val < Photo_Reflector_Min[Port]) {
+                Photo_Reflector_Min[Port] = Photo_Reflector_Val
+            }
+            basic.pause(10)
+        }
+    }
+
+    function GetMax(Port: Lib_Photo_Reflector_Port, Initialization: boolean) {
+        if (Initialization) {
+            Photo_Reflector_Max[Port] = 0
+        }
+        for (let index = 0; index < 10; index++) {
+            Photo_Reflector_Val = Value(Port)
+            if (Photo_Reflector_Val > Photo_Reflector_Max[Port]) {
+                Photo_Reflector_Max[Port] = Photo_Reflector_Val
+            }
+            basic.pause(10)
+        }
+    }
+
+
+    //% weight=1000
+    //% Pin.min=0 Pin.max=16
+    //%block="フォトリフレクタのピンの定義 $Port $Pin"
+    export function Define(Port: Lib_Photo_Reflector_Port, Pin: number) {
+        Photo_Reflector_Pin[Port] = Pin + 100
+    }
+
+    //% weight=990
+    //%block="フォトリフレクタ $Port"
+    export function Value(Port: Lib_Photo_Reflector_Port) {
+        for (let index = 0; index < 7; index++) {
+            Photo_Reflector_Total[index] = pins.analogReadPin(Photo_Reflector_Pin[Port])
+        }
+        for (let index = 0; index < 7; index++) {
+            Photo_Reflector_J = Photo_Reflector_I + 1
+            for (let index = 0; index < 7; index++) {
+                if (Photo_Reflector_Total[Photo_Reflector_I] > Photo_Reflector_Total[Photo_Reflector_J]) {
+                    Photo_Reflector_TMP = Photo_Reflector_Total[Photo_Reflector_I]
+                    Photo_Reflector_Total[Photo_Reflector_I] = Photo_Reflector_Total[Photo_Reflector_J]
+                    Photo_Reflector_Total[Photo_Reflector_J] = Photo_Reflector_TMP
+                }
+                Photo_Reflector_J += 1
+            }
+            Photo_Reflector_I += 1
+        }
+        return Photo_Reflector_Total[3]
+    }
+
+    //% weight=985
+    //% Val.min=0 Val.max=1023
+    //%block="フォトリフレクタ $Port $Symbol $Val"
+    export function Compare(Port: Lib_Photo_Reflector_Port, Symbol: Lib_Photo_Reflector_Symbol, Val: number) {
+        if (Symbol == 0) {
+            Photo_Reflector_TF = Value(Port) == Val
+        } else if (Symbol == 1) {
+            Photo_Reflector_TF = Value(Port) != Val
+        } else if (Symbol == 2) {
+            Photo_Reflector_TF = Value(Port) < Val
+        } else if (Symbol == 3) {
+            Photo_Reflector_TF = Value(Port) <= Val
+        } else if (Symbol == 4) {
+            Photo_Reflector_TF = Value(Port) > Val
+        } else if (Symbol == 5) {
+            Photo_Reflector_TF = Value(Port) >= Val
+        }
+        return Photo_Reflector_TF;
+    }
+
+    //% weight=980
+    //% block="フォトリフレクタの値を表示 $Port"
+    export function Show(Port: Lib_Photo_Reflector_Port) {
+        serial.writeValue("PR", Value(Port))
+    }
+
+    //% weight=970
+    //%block="フォトリフレクタ 補正値 $Port"
+    export function Offset(Port: Lib_Photo_Reflector_Port) {
+        Photo_Reflector_Val = 100 * (Value(Port) - Photo_Reflector_Min[Port]) / (Photo_Reflector_Max[Port] - Photo_Reflector_Min[Port])
+        Photo_Reflector_Val = Math.floor(Photo_Reflector_Val * 100) / 100
+        if (Photo_Reflector_Val > 100) {
+            Photo_Reflector_Val = 100
+        }
+        if (Photo_Reflector_Val < 0) {
+            Photo_Reflector_Val = 0
+        }
+        return Photo_Reflector_Val;
+    }
+
+    //% weight=965
+    //% Val.min=0 Val.max=100
+    //%block="フォトリフレクタ 補正値 $Port $Symbol $Val"
+    export function Photo_Reflector_Logic_AD(Port: Lib_Photo_Reflector_Port, Symbol: Lib_Photo_Reflector_Symbol, Val: number) {
+        if (Symbol == 0) {
+            Photo_Reflector_TF = Offset(Port) == Val
+        } else if (Symbol == 1) {
+            Photo_Reflector_TF = Offset(Port) != Val
+        } else if (Symbol == 2) {
+            Photo_Reflector_TF = Offset(Port) < Val
+        } else if (Symbol == 3) {
+            Photo_Reflector_TF = Offset(Port) <= Val
+        } else if (Symbol == 4) {
+            Photo_Reflector_TF = Offset(Port) > Val
+        } else if (Symbol == 5) {
+            Photo_Reflector_TF = Offset(Port) >= Val
+        }
+        return Photo_Reflector_TF;
+    }
+
+    //% weight=960
+    //% block="フォトリフレクタの補正値を表示 $Port"
+    export function Photo_Reflector_Show_AD(Port: Lib_Photo_Reflector_Port) {
+        serial.writeValue("PR", Offset(Port))
+    }
+
+    //% weight=910
+    //% block="フォトリフレクタの $MM を取得 $Port 初期化 $Initialization"
+    export function Get(MM:Lib_Photo_Reflector_MM,Port: Lib_Photo_Reflector_Port, Initialization: boolean) {
+        if(MM==0){
+            GetMax(Port, Initialization)
+        }else{
+            GetMin(Port, Initialization)
+        }
+    }
+
+    //% weight=895
+    //%block="フォトリフレクタの補正変数の定義 $Port $Color 最小値 $Min 最大値 $Max"
+    //% inlineInputMode=inline
+    export function DefineOffset(Port: Lib_Photo_Reflector_Port, Min: number, Max: number) {
+        Photo_Reflector_Min[Port] = Min
+        Photo_Reflector_Max[Port] = Max
+    }
+
+    //% weight=890
+    //%block="フォトリフレクタの補正変数を表示 $Port"
+    export function ShowVariable(Port: Lib_Photo_Reflector_Port): void {
+        serial.writeLine("PR:Port." + convertToText(Port) + "," + convertToText(Photo_Reflector_Min[Port]) + "," + convertToText(Photo_Reflector_Max[Port]))
+    }
+}

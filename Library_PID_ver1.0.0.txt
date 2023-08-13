@@ -1,0 +1,97 @@
+//ライブラリ：PID制御
+//ver1.0.0
+//ライブラリ「NXTmotor(ロボロボ製)」の前提ライブラリ
+
+//% weight=40 color=#ce0037
+//% block="PID"
+namespace PID{
+    let PID_Value = 0
+    let PID_Value_P = 0
+    let PID_Value_D = 0
+    let PID_Value_I = 0
+    let PID_Gain_P = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    let PID_Gain_D = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    let PID_Gain_I = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    let PID_Deviation_Now = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    let PID_Deviation_Previous = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    let PID_Deviation_Total = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    let PID_Flag = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    let PID_Counter_Conat = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    let PID_Counter_Zero = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+
+    //% weight=1000
+    //% inlineInputMode=inline
+    //% Channel.min=0 Channel.max=9
+    //% block="PID フラグ チャンネル $Channel"
+    export function Flag(Channel:number) {
+        return PID_Flag[Channel]
+    }
+
+    //% weight=990
+    //% inlineInputMode=inline
+    //% Channel.min=0 Channel.max=9
+    //% block="PID ゲインの定義 チャンネル $Channel P $Gain_P I $Gain_I D $Gain_D"
+    export function Gain(Channel:number,Gain_P: number, Gain_I: number, Gain_D: number) {
+        PID_Gain_P[Channel] = Gain_P
+        PID_Gain_I[Channel] = Gain_I
+        PID_Gain_D[Channel] = Gain_D
+    }
+
+    //% weight=980
+    //% inlineInputMode=inline
+    //% Channel.min=0 Channel.max=9
+    //% block="PID チャンネル $Channel 偏差 $Deviation I制御範囲 $I_Range 零点初期化 $I_Zero_Reset"
+    export function Value(Channel: number,Deviation: number, I_Range: number, I_Zero_Reset: boolean) {
+        // P制御
+        PID_Deviation_Now[Channel] = Deviation
+        PID_Value_P = PID_Deviation_Now[Channel] * PID_Gain_P[Channel]
+       
+        // I制御
+        if (Math.abs(PID_Deviation_Now[Channel]) < I_Range) {
+            PID_Deviation_Total[Channel] = PID_Deviation_Total[Channel] + PID_Deviation_Now[Channel]
+        } else {
+            PID_Deviation_Total[Channel] = 0
+        }
+        if (I_Zero_Reset && Math.abs(PID_Deviation_Previous[Channel]) / PID_Deviation_Previous[Channel] != Math.abs(PID_Deviation_Now[Channel]) / PID_Deviation_Now[Channel]) {
+            PID_Deviation_Total[Channel] = 0
+        }
+        PID_Value_I = PID_Deviation_Total[Channel] * PID_Gain_I[Channel]
+       
+        // D制御
+        PID_Value_D = (PID_Deviation_Now[Channel] - PID_Deviation_Previous[Channel]) * PID_Gain_D[Channel]
+        PID_Deviation_Previous = PID_Deviation_Now
+
+        // 合計
+        PID_Value = PID_Value_P + PID_Value_I + PID_Value_D
+
+        //フラグ管理
+        if (Math.abs(PID_Deviation_Now[Channel]) < 1) {
+            PID_Counter_Zero[Channel] = PID_Counter_Zero[Channel] + 1
+        } else {
+            PID_Counter_Zero[Channel] = 0
+        }
+        if (PID_Deviation_Now = PID_Deviation_Previous) {
+            PID_Counter_Conat[Channel] = PID_Counter_Conat[Channel] + 1
+        } else {
+            PID_Counter_Conat[Channel] = 0
+        }
+        if (PID_Counter_Zero[Channel] > 4 || PID_Counter_Conat[Channel] > 50) {
+            PID_Flag[Channel] = 1
+        } else {
+            PID_Flag[Channel] = 0
+        }
+        return PID_Value        
+    }
+
+    //% weight=980
+    //% inlineInputMode=inline
+    //% Channel.min=0 Channel.max=9
+    //% block="PID 初期化 チャンネル $Channel"
+    export function Reset(Channel: number) {
+        PID_Deviation_Total[Channel] = 0
+        PID_Deviation_Previous[Channel] = 0
+        PID_Flag[Channel] = 0
+        PID_Counter_Zero[Channel] = 0
+        PID_Counter_Conat[Channel] = 0
+    }
+}

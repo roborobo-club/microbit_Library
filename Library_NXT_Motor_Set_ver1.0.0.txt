@@ -1,0 +1,380 @@
+//ライブラリ：PID制御
+//ver1.0.0
+//ライブラリ「NXTmotor(ロボロボ製)」の前提ライブラリ
+
+//% weight=40 color=#ce0037
+//% block="PID"
+namespace PID{
+    let PID_Value = 0
+    let PID_Value_P = 0
+    let PID_Value_D = 0
+    let PID_Value_I = 0
+    let PID_Gain_P = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    let PID_Gain_D = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    let PID_Gain_I = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    let PID_Deviation_Now = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    let PID_Deviation_Previous = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    let PID_Deviation_Total = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    let PID_Flag = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    let PID_Counter_Conat = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    let PID_Counter_Zero = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+
+    //% weight=1000
+    //% inlineInputMode=inline
+    //% Channel.min=0 Channel.max=9
+    //% block="PID フラグ チャンネル $Channel"
+    export function Flag(Channel:number) {
+        return PID_Flag[Channel]
+    }
+
+    //% weight=990
+    //% inlineInputMode=inline
+    //% Channel.min=0 Channel.max=9
+    //% block="PID ゲインの定義 チャンネル $Channel P $Gain_P I $Gain_I D $Gain_D"
+    export function Gain(Channel:number,Gain_P: number, Gain_I: number, Gain_D: number) {
+        PID_Gain_P[Channel] = Gain_P
+        PID_Gain_I[Channel] = Gain_I
+        PID_Gain_D[Channel] = Gain_D
+    }
+
+    //% weight=980
+    //% inlineInputMode=inline
+    //% Channel.min=0 Channel.max=9
+    //% block="PID チャンネル $Channel 偏差 $Deviation I制御範囲 $I_Range 零点初期化 $I_Zero_Reset"
+    export function Value(Channel: number,Deviation: number, I_Range: number, I_Zero_Reset: boolean) {
+        // P制御
+        PID_Deviation_Now[Channel] = Deviation
+        PID_Value_P = PID_Deviation_Now[Channel] * PID_Gain_P[Channel]
+       
+        // I制御
+        if (Math.abs(PID_Deviation_Now[Channel]) < I_Range) {
+            PID_Deviation_Total[Channel] = PID_Deviation_Total[Channel] + PID_Deviation_Now[Channel]
+        } else {
+            PID_Deviation_Total[Channel] = 0
+        }
+        if (I_Zero_Reset && Math.abs(PID_Deviation_Previous[Channel]) / PID_Deviation_Previous[Channel] != Math.abs(PID_Deviation_Now[Channel]) / PID_Deviation_Now[Channel]) {
+            PID_Deviation_Total[Channel] = 0
+        }
+        PID_Value_I = PID_Deviation_Total[Channel] * PID_Gain_I[Channel]
+       
+        // D制御
+        PID_Value_D = (PID_Deviation_Now[Channel] - PID_Deviation_Previous[Channel]) * PID_Gain_D[Channel]
+        PID_Deviation_Previous = PID_Deviation_Now
+
+        // 合計
+        PID_Value = PID_Value_P + PID_Value_I + PID_Value_D
+
+        //フラグ管理
+        if (Math.abs(PID_Deviation_Now[Channel]) < 1) {
+            PID_Counter_Zero[Channel] = PID_Counter_Zero[Channel] + 1
+        } else {
+            PID_Counter_Zero[Channel] = 0
+        }
+        if (PID_Deviation_Now = PID_Deviation_Previous) {
+            PID_Counter_Conat[Channel] = PID_Counter_Conat[Channel] + 1
+        } else {
+            PID_Counter_Conat[Channel] = 0
+        }
+        if (PID_Counter_Zero[Channel] > 4 || PID_Counter_Conat[Channel] > 50) {
+            PID_Flag[Channel] = 1
+        } else {
+            PID_Flag[Channel] = 0
+        }
+        return PID_Value        
+    }
+
+    //% weight=980
+    //% inlineInputMode=inline
+    //% Channel.min=0 Channel.max=9
+    //% block="PID 初期化 チャンネル $Channel"
+    export function Reset(Channel: number) {
+        PID_Deviation_Total[Channel] = 0
+        PID_Deviation_Previous[Channel] = 0
+        PID_Flag[Channel] = 0
+        PID_Counter_Zero[Channel] = 0
+        PID_Counter_Conat[Channel] = 0
+    }
+}
+
+//ライブラリ：NXTモーター
+//ver1.0.0
+//前提ライブラリ「PCA9685」「PID(ロボロボ製)」
+enum Lib_NXT_Motor_Port {
+    //% block="Motor1"
+    Zero,
+    //% block="Motor2"
+    One,
+}
+
+enum Lib_NXT_Motor_Brake {
+    //% block="惰性ブレーキ"
+    Zero,
+    //% block="ロックブレーキ"
+    One
+}
+
+enum Lib_NXT_Motor_Rotate_Method {
+    //% block="度"
+    Zero,
+    //% block="回転"
+    One
+}
+
+enum Lib_NXT_Motor_Unit {
+    //% block="度"
+    Zero,
+    //% block="回転"
+    One,
+    //% block="rad"
+    Two
+}
+
+enum Lib_NXT_Motor_Speed_Unit {
+    //% block="度/s"
+    Zero,
+    //% block="回転/s"
+    One,
+    //% block="rad/s"
+    Two
+}
+
+enum Lib_NXT_Motor_Direction {
+    //% block="時計回り"
+    Zero,
+    //% block="反時計回り"
+    One,
+}
+
+//% color=#feb81c
+//% weight=30
+//% block="NXT モーター"
+namespace NXTmotor {
+    let Motor_Unit_Return = 0
+    let Motor_Unit_Val = 0
+    let PID_Power_B = 0
+    let PID_Power_A = 0
+    let PID_Power = 0
+    let PID_Value = 0
+    let PID_Target = 0
+    let Motor_Duty_Previous = [0, 0]
+    let Motor_Steering_AB = [0, 0]
+    let Motor_Angle_Rotate = [0, 0]
+    let Motor_Angle_Basis = [0, 0]
+    let Motor_Angle_Sensor = [0, 0]
+    let Motor_Angle_In = [0, 0]
+    let Motor_Speed = [0, 0, 0]
+    let Motor_Angle_Pin = [112, 115]
+
+    //単位変換関数 度⇔回転⇔rad
+    function Motor_Unit_Converter(Unit: Lib_NXT_Motor_Unit): number {
+        if (Unit == 0) {
+            Motor_Unit_Return = 1
+        } else if (Unit == 1) {
+            Motor_Unit_Return = 1 / 360
+        } else {
+            Motor_Unit_Return = 0.0174533
+        }
+        return Motor_Unit_Return;
+    }
+
+    //回転制御：PID
+    //select:0.Aモータ,1.Bモータ,2.前進,3.旋回
+    function Motor_PID(Select: number, Power: number, Tagert: number, Unit: Lib_NXT_Motor_Unit, Brake: Lib_NXT_Motor_Brake) {
+        PID.Reset(9)
+        if (Select == 1) {
+            PID_Target = Tagert / Motor_Unit_Converter(Unit) + Displacement(Lib_NXT_Motor_Port.One, Lib_NXT_Motor_Unit.Zero)
+        } else {
+            PID_Target = Tagert / Motor_Unit_Converter(Unit) + Displacement(Lib_NXT_Motor_Port.Zero, Lib_NXT_Motor_Unit.Zero)
+        }
+        while (PID.Flag(9) == 0) {
+            if (Select == 1) {
+                PID_Value = Math.round(PID.Value(9,PID_Target - Displacement(Lib_NXT_Motor_Port.One, Lib_NXT_Motor_Unit.Zero),  12, true))
+            } else {
+                PID_Value = Math.round(PID.Value(9,PID_Target - Displacement(Lib_NXT_Motor_Port.Zero, Lib_NXT_Motor_Unit.Zero),  12, true))
+            }
+            if (Math.abs(PID_Value) < Math.abs(Power)) {
+                PID_Power = PID_Value
+            } else {
+                PID_Power = Power
+            }
+            if (Select == 0) {
+                PID_Power_A = PID_Power
+                PID_Power_B = 0
+            } else if (Select == 1) {
+                PID_Power_A = 0
+                PID_Power_B = PID_Power
+            } else if (Select == 2) {
+                PID_Power_A = PID_Power
+                PID_Power_B = PID_Power
+            } else if (Select == 3) {
+                PID_Power_A = PID_Power
+                PID_Power_B = 0 - PID_Power
+            }
+            Rotate(Lib_NXT_Motor_Port.Zero, PID_Power_A)
+            Rotate(Lib_NXT_Motor_Port.One, PID_Power_B)
+            basic.pause(50)
+        }
+        if (Select == 0) {
+            Stop(Lib_NXT_Motor_Port.Zero, Brake)
+        } else if (Select == 1) {
+            Stop(Lib_NXT_Motor_Port.One, Brake)
+        } else if (Select == 2) {
+            Stop(Lib_NXT_Motor_Port.Zero, Brake)
+            Stop(Lib_NXT_Motor_Port.One, Brake)
+        } else if (Select == 3) {
+            Stop(Lib_NXT_Motor_Port.Zero, Brake)
+            Stop(Lib_NXT_Motor_Port.One, Brake)
+        } 
+    }
+
+    //% weight=1010
+    //% inlineInputMode=inline
+    //% block="モーターの起動"
+    export function Setup() {
+        PCA9685.reset(64)
+        PID.Gain(9,1,0.08,3)
+    }
+
+    //% weight=1000
+    //% inlineInputMode=inline
+    /**
+     Port.A:P13,Port.B:P16
+     「正パルスが入力されたとき」ブロックの中に入れる
+     */
+    //% inlineInputMode=inline
+    //% block="回転数センサー パルス $Port"
+    export function Pulse(Port: Lib_NXT_Motor_Port) {
+        if (pins.digitalReadPin(Motor_Angle_Pin[Port]) == 0) {
+            Motor_Angle_In[Port] += 2
+        } else if (pins.digitalReadPin(Motor_Angle_Pin[Port]) == 1) {
+            Motor_Angle_In[Port] += -2
+        }
+    }
+
+    //% weight=990
+    //% Duty.min=-100 Duty.max=100
+    //% inlineInputMode=inline
+    //% block="$Port を駆動開始 $Duty ％"
+    export function Rotate(Port: Lib_NXT_Motor_Port, Duty: number) {
+        if (Motor_Duty_Previous[Port] != Duty) {
+            PCA9685.setLedDutyCycle(3 * Port + 1, Math.abs(Duty), 64)
+            PCA9685.setLedDutyCycle(3 * Port + 2, Math.floor((Math.abs(Duty) - Duty) / (-2 * Duty - 0.1)) * 100, 64)
+            PCA9685.setLedDutyCycle(3 * Port + 3, Math.floor((Math.abs(Duty) + Duty) / (2 * Duty - 0.1)) * 100, 64)
+            Motor_Duty_Previous[Port] = Duty
+        }
+    }
+
+    //% weight=980
+    //% inlineInputMode=inline
+    //% block="$Port を停止 $Brake"
+    export function Stop(Port: Lib_NXT_Motor_Port, Brake: Lib_NXT_Motor_Brake) {
+        PCA9685.setLedDutyCycle(3 * Port + 1, Brake * 100, 64)
+        PCA9685.setLedDutyCycle(3 * Port + 2, Brake * 100, 64)
+        PCA9685.setLedDutyCycle(3 * Port + 3, Brake * 100, 64)
+        Motor_Duty_Previous[Port] = 0
+    }
+
+    //% weight=970
+    //% Duty.min=-100 Duty.max=100 
+    //% inlineInputMode=inline
+    //% block="$Port を駆動 $Duty ％ $Target $Unit $Brake"
+    export function Angle(Port: Lib_NXT_Motor_Port, Duty: number, Target: number, Unit: Lib_NXT_Motor_Unit, Brake: Lib_NXT_Motor_Brake) {
+        Motor_PID(Port, Duty, Target, Unit, Brake)
+    }
+
+    //% weight=960
+    //% inlineInputMode=inline
+    //% DutyA.min=-100 DutyA.max=100
+    //% DutyB.min=-100 DutyB.max=100
+    //% block="移動を開始 $DutyA ％ $DutyB ％"
+    export function Drive(DutyA: number, DutyB: number) {
+        Rotate(0, DutyA)
+        Rotate(1, DutyB)
+    }
+
+    //% weight=955
+    //% inlineInputMode=inline
+    //% Duty.min=-100 Duty.max=100
+    //% Steering.min=-100 Steering.max=100
+    //% block="ステアリング移動 $Duty ％ 向き $Steering"
+    export function Steering(Duty: number, Steering: number) {
+        if (Steering == 0) {
+            Motor_Steering_AB[0] = 1
+            Motor_Steering_AB[1] = 1
+        } else if (Steering > 0) {
+            Motor_Steering_AB[0] = 1
+            Motor_Steering_AB[1] = (100 - 2 * Math.abs(Steering)) / 100
+        } else {
+            Motor_Steering_AB[0] = (100 - 2 * Math.abs(Steering)) / 100
+            Motor_Steering_AB[1] = 1
+        }
+
+        Rotate(0, Duty * Motor_Steering_AB[0])
+        Rotate(1, Duty * Motor_Steering_AB[1])
+    }
+
+    //% weight=950
+    //% inlineInputMode=inline
+    //% block="移動を停止 $Brake"
+    export function DriveStop(Brake: Lib_NXT_Motor_Brake) {
+        Stop(0, Brake)
+        Stop(1, Brake)
+    }
+
+    //% weight=945
+    //% Duty.min=-100 Duty.max=100 
+    //% inlineInputMode=inline
+    //% block="直進 $Duty ％ $Target $Unit $Brake"
+    export function Straight(Duty: number, Target: number, Unit: Lib_NXT_Motor_Unit, Brake: Lib_NXT_Motor_Brake) {
+        Motor_PID(2, Duty, Target, Unit, Brake)
+    }
+
+    //% weight=943
+    //% Duty.min=-100 Duty.max=100 
+    //% inlineInputMode=inline
+    //% block="旋回 $Direction $Duty ％ $Target $Unit $Brake"
+    export function Turn(Direction: Lib_NXT_Motor_Direction, Duty: number, Target: number, Unit: Lib_NXT_Motor_Unit, Brake: Lib_NXT_Motor_Brake) {
+        if (Direction==0){
+            Motor_PID(3,- Duty,- Target, Unit, Brake)
+        }else{
+            Motor_PID(3,Duty,Target, Unit, Brake)
+        }
+        
+    }
+
+    //% weight=940
+    //% inlineInputMode=inline
+    //% block="回転数センサーを初期化 $Port"
+    export function Reset(Port: Lib_NXT_Motor_Port) {
+        Motor_Angle_Basis[Port] = Motor_Angle_In[Port]
+    }
+
+    //% weight=930
+    //% inlineInputMode=inline
+    //% block="回転数センサー $Port $Unit"
+    export function Displacement(Port: Lib_NXT_Motor_Port, Unit: Lib_NXT_Motor_Unit) {
+        return Math.floor((Motor_Angle_In[Port] - Motor_Angle_Basis[Port]) * Motor_Unit_Converter(Unit) * 100) / 100;
+    }
+
+    //% weight=920
+    //% inlineInputMode=inline
+    //% block="角速度センサー $Port $Unit"
+    export function Velocity(Port: Lib_NXT_Motor_Port, Unit: Lib_NXT_Motor_Speed_Unit) {
+        Motor_Unit_Val = Unit
+        Motor_Speed[0] = Motor_Angle_In[Port]
+        basic.pause(50)
+        Motor_Speed[1] = Motor_Angle_In[Port]
+        Motor_Speed[2] = (Motor_Speed[1] - Motor_Speed[0]) * 20 * Motor_Unit_Converter(Motor_Unit_Val)
+        return Math.floor(Motor_Speed[2] * 100) / 100;
+    }
+
+    /**
+     初期値 P:1 I:0.08 D:3
+     */
+    //% weight=910
+    //% inlineInputMode=inline
+    //% block="モーター ゲインの設定 P $PGain I $IGain D $DGain"
+    export function Gain(PGain: number, IGain: number, DGain: number) {
+        PID.Gain(9,PGain,IGain,DGain)
+    }
+}
