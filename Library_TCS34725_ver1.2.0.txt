@@ -1,0 +1,404 @@
+//ライブラリ：TCS34725
+//前提ライブラリ「PCA9685」
+//ver1.2.0
+
+enum Lib_TCS34725_LRGB {
+    //% block="光"
+    Zero,
+    //% block="赤"
+    One,
+    //% block="緑"
+    Two,
+    //% block="青"
+    Three,
+}
+
+enum Lib_TCS34725_LRGB_ALL {
+    //% block="光"
+    Zero,
+    //% block="赤"
+    One,
+    //% block="緑"
+    Two,
+    //% block="青"
+    Three,
+    //% block="全"
+    Four,
+}
+
+enum Lib_TCS34725_Gain {
+    //% block="*1"
+    Zero,
+    //% block="*4"
+    One,
+    //% block="*16"
+    Two,
+    //% block="*60"
+    Three,
+}
+
+enum Lib_TCS34725_Symbol {
+    //% block="="
+    Zero,
+    //% block="≠"
+    One,
+    //% block="<"
+    Two,
+    //% block="≦"
+    Three,
+    //% block=">"
+    Four,
+    //% block="≧"
+    Five,
+}
+
+enum Lib_TCS34725_MM {
+    //% block="最大値"
+    Zero,
+    //% block="最小値"
+    One,
+}
+
+//% color=#0177c8
+//% weight=20
+namespace TCS34725 {
+    let TCS34725_ADDRESS = 0
+    let Lib_TCS34725_Gain_Def = 0
+    let TCS34725_i = 0
+    let TCS34725_val_D = 0
+    let TCS34725_val_U = 0
+    let TCS34725_Color_Color_Def = 0
+    let TCS34725_AD_MM_Coordinate = 0
+    let TCS34725_AD_Cor = 0
+    let TCS34725_I = 0
+    let TCS34725_J = 0
+    let TCS34725_TMP = 0
+    let TCS34725_TF = false
+    let TCS34725_I2C = [41, 42]
+    let TCS34725_Total = [0, 0, 0, 0]
+    let TCS34725_Statisticsv = [0,0,0,0,0,0,0,0] 
+    let TCS34725_Lib_TCS34725_LRGB = [0, 0, 0, 0, 0, 0, 0, 0]
+    let TCS34725_AD_MM = [2147483647, 2147483647, 2147483647, 2147483647, 0, 0, 0, 0, 0, 0, 2147483647, 2147483647, 2147483647, 2147483647, 0, 0, 0, 0]
+    //[1Lmin,1Rmin,1Gmin,1Bmin,1Lmax,1Rmax,1Gmax,1Bmax,0,0,2Lmin,2Rmin,2Gmin,2Bmin,2Lmax,2Rmax,2Gmax,2Bmax]
+    let TCS34725_Color_Name = ["Light", "R", "G", "B"]
+
+    let Port = 0
+
+    function GetValue(Port_Get: number) {
+        TCS34725_ADDRESS = TCS34725_I2C[Port_Get]
+        pins.i2cWriteNumber(
+            TCS34725_ADDRESS,
+            148,
+            NumberFormat.UInt8LE,
+            true
+        )
+        TCS34725_Lib_TCS34725_LRGB[0] = pins.i2cReadNumber(TCS34725_ADDRESS, NumberFormat.UInt8LE, true)
+        TCS34725_Lib_TCS34725_LRGB[1] = pins.i2cReadNumber(TCS34725_ADDRESS, NumberFormat.UInt8LE, false)
+        pins.i2cWriteNumber(
+            TCS34725_ADDRESS,
+            150,
+            NumberFormat.UInt8LE,
+            true
+        )
+        TCS34725_Lib_TCS34725_LRGB[2] = pins.i2cReadNumber(TCS34725_ADDRESS, NumberFormat.UInt8LE, true)
+        TCS34725_Lib_TCS34725_LRGB[3] = pins.i2cReadNumber(TCS34725_ADDRESS, NumberFormat.UInt8LE, false)
+        pins.i2cWriteNumber(
+            TCS34725_ADDRESS,
+            152,
+            NumberFormat.UInt8LE,
+            true
+        )
+        TCS34725_Lib_TCS34725_LRGB[4] = pins.i2cReadNumber(TCS34725_ADDRESS, NumberFormat.UInt8LE, true)
+        TCS34725_Lib_TCS34725_LRGB[5] = pins.i2cReadNumber(TCS34725_ADDRESS, NumberFormat.UInt8LE, false)
+        pins.i2cWriteNumber(
+            TCS34725_ADDRESS,
+            154,
+            NumberFormat.UInt8LE,
+            true
+        )
+        TCS34725_Lib_TCS34725_LRGB[6] = pins.i2cReadNumber(TCS34725_ADDRESS, NumberFormat.UInt8LE, true)
+        TCS34725_Lib_TCS34725_LRGB[7] = pins.i2cReadNumber(TCS34725_ADDRESS, NumberFormat.UInt8LE, false)
+        TCS34725_i = 0
+        for (let index = 0; index < 4; index++) {
+            TCS34725_val_D = TCS34725_Lib_TCS34725_LRGB[2 * TCS34725_i]
+            TCS34725_val_U = TCS34725_Lib_TCS34725_LRGB[2 * TCS34725_i + 1]
+            TCS34725_Total[TCS34725_i] = TCS34725_val_U * 256 + TCS34725_val_D
+            TCS34725_i += 1
+        }
+    }
+
+    function GetValueMin(Color: Lib_TCS34725_LRGB, Initialization: boolean) {
+        TCS34725_AD_MM_Coordinate = 10 * Port + Color
+        if (Initialization) {
+            TCS34725_AD_MM[TCS34725_AD_MM_Coordinate] = 2147483647
+        }
+        GetValue(Port)
+        for (let index = 0; index < 10; index++) {
+            GetValue(Port)
+            if (TCS34725_Total[Color] < TCS34725_AD_MM[TCS34725_AD_MM_Coordinate]) {
+                TCS34725_AD_MM[TCS34725_AD_MM_Coordinate] = TCS34725_Total[Color]
+            }
+        }
+    }
+
+    function GetValueMax(Color: Lib_TCS34725_LRGB, Initialization: boolean) {
+        TCS34725_AD_MM_Coordinate = 10 * Port + Color + 4
+        if (Initialization) {
+            TCS34725_AD_MM[TCS34725_AD_MM_Coordinate] = 0
+        }
+        GetValue(Port)
+        for (let index = 0; index < 10; index++) {
+            GetValue(Port)
+            if (TCS34725_Total[Color] > TCS34725_AD_MM[TCS34725_AD_MM_Coordinate]) {
+                TCS34725_AD_MM[TCS34725_AD_MM_Coordinate] = TCS34725_Total[Color]
+            }
+        }
+    }
+
+    function GetValueMinALL(Color: Lib_TCS34725_LRGB_ALL, Initialization: boolean) {
+        TCS34725_Color_Color_Def = Color
+        if (Color == 4) {
+            GetValueMin(0, Initialization)
+            GetValueMin(1, Initialization)
+            GetValueMin(2, Initialization)
+            GetValueMin(3, Initialization)
+        } else {
+            GetValueMin(TCS34725_Color_Color_Def, Initialization)
+        }
+    }
+
+    function GetValueMaxALL(Color: Lib_TCS34725_LRGB_ALL, Initialization: boolean) {
+        TCS34725_Color_Color_Def = Color
+        if (Color == 4) {
+            GetValueMax(0, Initialization)
+            GetValueMax(1, Initialization)
+            GetValueMax(2, Initialization)
+            GetValueMax(3, Initialization)
+        } else {
+            GetValueMax(TCS34725_Color_Color_Def, Initialization)
+        }
+    }
+
+    //% weight=1000
+    //% inlineInputMode=inline
+    //%block="TCS34725の起動 "
+    export function Setup() {
+        TCS34725_ADDRESS = TCS34725_I2C[Port]
+        pins.i2cWriteNumber(
+            TCS34725_ADDRESS,
+            146,
+            NumberFormat.UInt8LE,
+            true
+        )
+        pins.i2cWriteNumber(
+            TCS34725_ADDRESS,
+            129,
+            NumberFormat.UInt8LE,
+            true
+        )
+        pins.i2cWriteNumber(
+            TCS34725_ADDRESS,
+            0,
+            NumberFormat.UInt8LE,
+            false
+        )
+        pins.i2cWriteNumber(
+            TCS34725_ADDRESS,
+            143,
+            NumberFormat.UInt8LE,
+            true
+        )
+        pins.i2cWriteNumber(
+            TCS34725_ADDRESS,
+            0,
+            NumberFormat.UInt8LE,
+            false
+        )
+        pins.i2cWriteNumber(
+            TCS34725_ADDRESS,
+            128,
+            NumberFormat.UInt8LE,
+            true
+        )
+        pins.i2cWriteNumber(
+            TCS34725_ADDRESS,
+            3,
+            NumberFormat.UInt8LE,
+            false
+        )
+        PCA9685.setLedDutyCycle(PCA9685.LEDNum.LED11, 100, 64)
+        basic.pause(3)
+    }
+
+    //% weight=990
+    //% inlineInputMode=inline
+    //%block="TCS34725  $Color"
+    export function Value(Color: Lib_TCS34725_LRGB) {
+        for (let index = 0; index < 7; index++) {
+            GetValue(Port)
+            TCS34725_Statisticsv[index] = TCS34725_Total[Color]
+        }
+        for (let index = 0; index < 7; index++) {
+           TCS34725_J = TCS34725_I + 1
+            for (let index = 0; index < 7; index++) {
+                if (TCS34725_Statisticsv[TCS34725_I] > TCS34725_Statisticsv[TCS34725_J]) {
+                    TCS34725_TMP = TCS34725_Statisticsv[TCS34725_I]
+                    TCS34725_Statisticsv[TCS34725_I] = TCS34725_Statisticsv[TCS34725_J]
+                    TCS34725_Statisticsv[TCS34725_J] = TCS34725_TMP
+                }
+                TCS34725_J += 1
+            }
+            TCS34725_I += 1
+        }
+        return TCS34725_Statisticsv[3];
+    }
+
+    //% weight=985
+    //% Val.min=0 Val.max=1023
+    //% inlineInputMode=inline
+    //%block="TCS34725  $Color $Symbol $Val"
+    export function Compare(Color: Lib_TCS34725_LRGB, Symbol: Lib_TCS34725_Symbol, Val: number) {
+        if (Symbol == 0) {
+            TCS34725_TF = Value(Color) == Val
+        } else if (Symbol == 1) {
+            TCS34725_TF = Value(Color) != Val
+        } else if (Symbol == 2) {
+            TCS34725_TF = Value(Color) < Val
+        } else if (Symbol == 3) {
+            TCS34725_TF = Value(Color) <= Val
+        } else if (Symbol == 4) {
+            TCS34725_TF = Value(Color) > Val
+        } else if (Symbol == 5) {
+            TCS34725_TF = Value(Color) >= Val
+        }
+        return TCS34725_TF;
+    }
+
+    //% weight=980
+    //% inlineInputMode=inline
+    //% block="TCS34725の $Color の値を表示"
+    export function Show(Color: Lib_TCS34725_LRGB_ALL) {
+        GetValue(Port)
+        if (Color == 4) {
+            serial.writeValue("Light", TCS34725_Total[0])
+            serial.writeValue("R", TCS34725_Total[1])
+            serial.writeValue("G", TCS34725_Total[2])
+            serial.writeValue("B", TCS34725_Total[3])
+        } else {
+            serial.writeValue(TCS34725_Color_Name[Color], TCS34725_Total[Color])
+        }
+    }
+
+    //% weight=970
+    //% inlineInputMode=inline
+    //%block="TCS34725の $Color の補正値"
+    export function Offset(Color: Lib_TCS34725_LRGB) {
+        TCS34725_AD_Cor = 100 * (Value(Color) - TCS34725_AD_MM[10 * Port + Color] + 0.1) / (TCS34725_AD_MM[10 * Port + Color + 4] - TCS34725_AD_MM[10 * Port + Color])
+        TCS34725_AD_Cor = Math.floor(TCS34725_AD_Cor * 100) / 100
+        if (TCS34725_AD_Cor > 100) {
+            TCS34725_AD_Cor = 100
+        }
+        if (TCS34725_AD_Cor < 0) {
+            TCS34725_AD_Cor = 0
+        }
+        return TCS34725_AD_Cor;
+    }
+
+    //% weight=960
+    //% Val.min=0 Val.max=1023
+    //% inlineInputMode=inline
+    //%block="TCS34725の $Color の補正値 $Symbol $Val"
+    export function CompareOffset(Color: Lib_TCS34725_LRGB, Symbol: Lib_TCS34725_Symbol, Val: number) {
+        if (Symbol == 0) {
+            TCS34725_TF = Offset(Color) == Val
+        } else if (Symbol == 1) {
+            TCS34725_TF = Offset(Color) != Val
+        } else if (Symbol == 2) {
+            TCS34725_TF = Offset(Color) < Val
+        } else if (Symbol == 3) {
+            TCS34725_TF = Offset(Color) <= Val
+        } else if (Symbol == 4) {
+            TCS34725_TF = Offset(Color) > Val
+        } else if (Symbol == 5) {
+            TCS34725_TF = Offset(Color) >= Val
+        }
+        return TCS34725_TF;
+    }
+
+    //% weight=950
+    //% inlineInputMode=inline
+    //%block="TCS34725の $Color の補正値を表示"
+    export function ShowOffset(Color: Lib_TCS34725_LRGB_ALL) {
+        TCS34725_Color_Color_Def = Color
+        if (Color == 4) {
+            serial.writeValue("Light", Offset(0))
+            serial.writeValue("Red", Offset(1))
+            serial.writeValue("Green", Offset(2))
+            serial.writeValue("Blue", Offset(3))
+        } else {
+            serial.writeValue(TCS34725_Color_Name[Color], Offset(TCS34725_Color_Color_Def))
+        }
+    }
+
+    //% weight=940
+    //% inlineInputMode=inline
+    //%block="TCS34725の $Color の $MM を取得 初期化 $Initialization"
+    export function Get(MM: Lib_TCS34725_MM, Color: Lib_TCS34725_LRGB_ALL, Initialization: boolean) {
+        if (MM == 0) {
+            GetValueMaxALL(Color, Initialization)
+        } else {
+            GetValueMinALL(Color, Initialization)
+        }
+    }
+
+    //% weight=920
+    //%block="TCS34725の $Color の補正変数の定義 最小値 $Min 最大値 $Max"
+    //% inlineInputMode=inline
+    export function Define(Color: Lib_TCS34725_LRGB, Min: number, Max: number) {
+        TCS34725_AD_MM[10 * Port + Color] = Min
+        TCS34725_AD_MM[10 * Port + Color + 4] = Max
+    }
+
+    //% weight=910
+    //% inlineInputMode=inline
+    //%block="TCS34725の補正変数を表示 "
+    export function ShowVariable() {
+        serial.writeLine("Light:" + convertToText(TCS34725_AD_MM[10 * Port]) + "," + convertToText(TCS34725_AD_MM[10 * Port + 4]))
+        serial.writeLine("Red  :" + convertToText(TCS34725_AD_MM[10 * Port + 1]) + "," + convertToText(TCS34725_AD_MM[10 * Port + 5]))
+        serial.writeLine("Green:" + convertToText(TCS34725_AD_MM[10 * Port + 2]) + "," + convertToText(TCS34725_AD_MM[10 * Port + 6]))
+        serial.writeLine("Blue :" + convertToText(TCS34725_AD_MM[10 * Port + 3]) + "," + convertToText(TCS34725_AD_MM[10 * Port + 7]))
+    }
+
+    //% weight=900
+    //% inlineInputMode=inline
+    /**
+     初期値：*1
+     */
+    //% block="ゲインの定義  $Gain"
+    export function Gain(Gain: Lib_TCS34725_Gain) {
+        if (Gain == 0) {
+            Lib_TCS34725_Gain_Def = 0b00
+        }
+        if (Gain == 1) {
+            Lib_TCS34725_Gain_Def = 0b01
+        }
+        if (Gain == 2) {
+            Lib_TCS34725_Gain_Def = 0b10
+        }
+        if (Gain == 3) {
+            Lib_TCS34725_Gain_Def = 0b11
+        }
+        pins.i2cWriteNumber(
+            TCS34725_ADDRESS,
+            143,
+            NumberFormat.UInt8LE,
+            true
+        )
+        pins.i2cWriteNumber(
+            TCS34725_ADDRESS,
+            Lib_TCS34725_Gain_Def,
+            NumberFormat.UInt8LE,
+            false
+        )
+    }
+}

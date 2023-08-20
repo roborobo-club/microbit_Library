@@ -1,0 +1,31 @@
+○Library_2023_Summer_Workshop_Set
+ ・ver1.0.0 2023/8/13
+   ・初実装
+ ・ver1.1.0 2023/8/14
+   ・「Library_TCS34725」の更新
+ ・ver1.2.0 2023/8/20
+   ・「Library_TCS34725」の更新
+
+○Library_NXT_Motor_Set
+ ・ver1.0.0 2023/8/13
+   ・初実装
+
+○Library_NXT_Motor
+ ・ver1.0.0 2023/8/13
+   ・初実装
+
+○Library_Photo_Reflector
+ ・ver1.0.0 2023/8/13
+   ・初実装
+
+○Library_PID
+ ・ver1.0.0 2023/8/13
+   ・初実装
+ 
+○Library_TCS34725
+ ・ver1.0.0 2023/8/13
+   ・初実装
+ ・ver1.1.0 2023/8/14
+   ・「TCS34725の起動」に「LED点灯」を追加
+ ・ver1.2.0 2023/8/20
+   ・飛び値を処理するプログラムを追加
